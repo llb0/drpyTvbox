@@ -54,10 +54,10 @@ allprojects {
     }
 }
 ext {
-    compileSdkVersion = 30
-    minSdkVersion = 16
+    compileSdkVersion = 33
+    minSdkVersion = 18
     targetSdkVersion = 26
-    exoVersion = "2.16.0"
+    exoVersion = "2.18.5"
 }
 task clean(type: Delete) {
     delete rootProject.buildDir
