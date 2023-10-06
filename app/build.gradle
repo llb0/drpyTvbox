@@ -55,7 +55,7 @@ android {
             //noinspection ChromeOsAbiSupport
             ndk { abiFilters "armeabi-v7a" }
         }
-        arm64_v8a {
+       /* arm64_v8a {
             dimension "abi"
             versionCode versionCodeNew
             versionName versionNameNew
@@ -68,7 +68,7 @@ android {
             versionName versionNameNew
             //noinspection ChromeOsAbiSupport
             ndk { abiFilters "arm64-v8a", "armeabi-v7a" }
-        }
+        }*/
     }
     packagingOptions {
         exclude 'META-INF/beans.xml'
