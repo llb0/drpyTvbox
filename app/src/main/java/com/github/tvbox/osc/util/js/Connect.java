@@ -11,6 +11,7 @@ import com.whl.quickjs.wrapper.JSObject;
 import com.whl.quickjs.wrapper.JSUtils;
 import com.whl.quickjs.wrapper.QuickJSContext;
 
+import java.io.File;
 import java.util.List;
 import java.util.Map;
 import java.util.Random;
@@ -35,14 +36,14 @@ public class Connect {
                 .connectTimeout(req.getTimeout(), TimeUnit.MILLISECONDS)
                 .readTimeout(req.getTimeout(), TimeUnit.MILLISECONDS)
                 .writeTimeout(req.getTimeout(), TimeUnit.MILLISECONDS).build();
-        return client.newCall(getRequest(url, req, Headers.of(req.getHeader())));
+        return client.newCall(getRequest(url.replace("https://ghproxy.net/https://","https://external.githubfast.com/https/"), req, Headers.of(req.getHeader())));
     }
 
     public static JSObject success(QuickJSContext ctx, Req req, Response res) {
         try {
             JSObject jsObject = ctx.createJSObject();
             JSObject jsHeader = ctx.createJSObject();
-            setHeader(ctx, res, jsHeader);
+            setHeader(res, jsHeader);
             jsObject.set("headers", jsHeader);
             if (req.getBuffer() == 0) jsObject.set("content", new String(res.body().bytes(), req.getCharset()));
             if (req.getBuffer() == 1) {
@@ -98,14 +99,16 @@ public class Connect {
         String boundary = "--dio-boundary-" + new Random().nextInt(42949) + "" + new Random().nextInt(67296);
         MultipartBody.Builder builder = new MultipartBody.Builder(boundary).setType(MultipartBody.FORM);
         Map<String, String> params = Json.toMap(req.getData());
-        for (String key : params.keySet()) builder.addFormDataPart(key, params.get(key));
+        for (String key : params.keySet()){
+            builder.addFormDataPart(key, params.get(key));
+        }
         return builder.build();
     }
 
-    private static void setHeader(QuickJSContext ctx, Response res, JSObject object) {
+    private static void setHeader(Response res, JSObject object) {
         for (Map.Entry<String, List<String>> entry : res.headers().toMultimap().entrySet()) {
             if (entry.getValue().size() == 1) object.set(entry.getKey(), entry.getValue().get(0));
-            if (entry.getValue().size() >= 2) object.set(entry.getKey(), new JSUtils<String>().toArray(ctx, entry.getValue()));
+            if (entry.getValue().size() >= 2) object.set(entry.getKey(), String.join(";",entry.getValue()));
         }
     }
     public static void cancelByTag(Object tag) {

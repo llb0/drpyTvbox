@@ -9,6 +9,7 @@ import com.github.catvod.crawler.JarLoader;
 import com.github.catvod.crawler.JsLoader;
 import com.github.catvod.crawler.Spider;
 
+import com.github.catvod.crawler.SpiderNull;
 import com.github.tvbox.osc.R;
 import com.github.tvbox.osc.base.App;
 import com.github.tvbox.osc.bean.DriveFolderFile;
@@ -38,6 +39,7 @@ import com.orhanobut.hawk.Hawk;
 
 import com.github.tvbox.osc.util.TxtSubscribe;
 import com.github.tvbox.osc.util.StringUtils;
+import com.undcover.freedom.pyramid.PythonLoader;
 
 import org.json.JSONObject;
 
@@ -76,6 +78,7 @@ public class ApiConfig {
 
     private JarLoader jarLoader = new JarLoader();
     private JsLoader jsLoader = new JsLoader();
+    private PythonLoader pyLoader = PythonLoader.getInstance();
 
     private ApiConfig() {
         sourceBeanList = new LinkedHashMap<>();
@@ -269,6 +272,7 @@ public class ApiConfig {
             public void onSuccess(Response<File> response) {
                 if (response.body().exists()) {
                     jsLoader.load();
+                    pyLoader.load();
                     if (jarLoader.load(response.body().getAbsolutePath())) {
                         callback.success();
                     } else {
@@ -300,7 +304,6 @@ public class ApiConfig {
     }
 
     private void parseJson(String apiUrl, String jsonStr) {
-
         JsonObject infoJson = new Gson().fromJson(jsonStr, JsonObject.class);
         // spider
         spider = DefaultConfig.safeJsonString(infoJson, "spider", "");
@@ -624,32 +627,40 @@ public class ApiConfig {
     }
 
     public Spider getCSP(SourceBean sourceBean) {
-        if (sourceBean.getApi().toLowerCase().endsWith(".js")) {
+        if (sourceBean.getApi().toLowerCase().contains(".js")) {
             return jsLoader.getSpider(sourceBean.getKey(), sourceBean.getApi(), sourceBean.getExt(), sourceBean.getJar());
         }
-
+        if (sourceBean.getApi().toLowerCase().contains(".py")) {
+            try {
+                return pyLoader.getSpider(sourceBean.getKey(), sourceBean.getApi(), sourceBean.getExt());
+            } catch (Exception e) {
+                e.printStackTrace();
+                return new SpiderNull();
+            }
+        }
         return jarLoader.getSpider(sourceBean.getKey(), sourceBean.getApi(), sourceBean.getExt(), sourceBean.getJar());
     }
 
-    public Object[] proxyLocal(Map<String, String> param) {
+    public Object[] proxyLocal(Map<String, String> params) {
         try {
-            String doStr = param.get("do");
-            if (doStr.equals("live")) {
-                String type = param.get("type");
-                if (type.equals("txt")) {
-                    String ext = param.get("ext");
-                    ext = new String(Base64.decode(ext, Base64.DEFAULT | Base64.URL_SAFE | Base64.NO_WRAP), "UTF-8");
-                    return TxtSubscribe.load(ext);
-                }
-            }
-            if (doStr.equals("js")) {
-                return jsLoader.proxyInvoke(param);
+            String what = params.containsKey("do") ? params.get("do") : "";
+            switch (what) {
+                case "js":
+                    return jsLoader.proxyInvoke(params);
+                case "py":
+                    return pyLoader.proxyLocal(params);
+                case "live":
+                    String type = params.get("type");
+                    if (type.equals("txt")) {
+                        String ext = params.get("ext");
+                        ext = new String(Base64.decode(ext, Base64.DEFAULT | Base64.URL_SAFE | Base64.NO_WRAP), "UTF-8");
+                        return TxtSubscribe.load(ext);
+                    }
             }
         } catch (Exception e) {
-            LOG.e("proxyLocal", e);
+            e.printStackTrace();
         }
-
-        return jarLoader.proxyInvoke(param);
+        return jarLoader.proxyInvoke(params);
     }
 
     public JSONObject jsonExt(String key, LinkedHashMap<String, String> jxs, String url) {

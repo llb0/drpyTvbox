@@ -23,10 +23,12 @@ import com.p2p.P2PClass;
 
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.regex.Pattern;
 
 import com.jieba_android.JiebaSegmenter;
 
 import com.simple.spiderman.SpiderMan;
+import com.undcover.freedom.pyramid.PythonLoader;
 import com.whl.quickjs.android.QuickJSLoader;
 
 import me.jessyan.autosize.AutoSizeConfig;
@@ -40,8 +42,12 @@ import me.jessyan.autosize.unit.Subunits;
 public class App extends MultiDexApplication {
     private static App instance;
     private Activity homeActivity;
-    private static P2PClass p;
+    public static P2PClass p;
     public static String burl;
+    public static final Pattern pp = Pattern.compile("url\\((.*?)\\)", Pattern.MULTILINE | Pattern.DOTALL);
+    public static final Pattern NOADD_INDEX = Pattern.compile(":eq|:lt|:gt|:first|:last|^body$|^#");  // 不自动加eq下标索引
+    public static final Pattern URLJOIN_ATTR = Pattern.compile("(url|src|href|-original|-src|-play|-url|style)$", Pattern.MULTILINE | Pattern.CASE_INSENSITIVE);  // 需要自动urljoin的属性
+    public static final Pattern SPECIAL_URL = Pattern.compile("^(ftp|magnet|thunder|ws):", Pattern.MULTILINE | Pattern.CASE_INSENSITIVE);  // 过滤特殊链接,不走urlJoin
 
     @Override
     public void onCreate() {
@@ -69,7 +75,7 @@ public class App extends MultiDexApplication {
                 .setSupportSubunits(Subunits.MM);
         PlayerHelper.init();
         QuickJSLoader.init();
-
+        PythonLoader.getInstance().setApplication(this);
         JiebaSegmenter.init(instance.getApplicationContext());
     }
 
@@ -136,6 +142,7 @@ public class App extends MultiDexApplication {
     public void onTerminate() {
         super.onTerminate();
         JsLoader.load();
+        PythonLoader.getInstance().load();
         jianpian.finish();
     }
 

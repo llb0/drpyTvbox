@@ -84,6 +84,7 @@ import com.github.tvbox.osc.util.thunder.Thunder;
 import com.github.tvbox.osc.viewmodel.SourceViewModel;
 import com.google.android.exoplayer2.Player;
 import com.google.android.exoplayer2.text.Cue;
+import com.google.gson.Gson;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
@@ -117,6 +118,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.regex.Pattern;
 
 import me.jessyan.autosize.AutoSize;
 import tv.danmaku.ijk.media.player.IMediaPlayer;
@@ -592,8 +594,11 @@ public class PlayActivity extends BaseActivity {
                         mVideoView.setProgressKey(progressKey);
                         if (headers != null) {
                             mVideoView.setUrl(url, headers);
+                            String header = new Gson().toJson(headers);
+                            EventBus.getDefault().post(new RefreshEvent(RefreshEvent.TYPE_PLAY_RUL, url + "@@" + header));
                         } else {
                             mVideoView.setUrl(url);
+                            EventBus.getDefault().post(new RefreshEvent(RefreshEvent.TYPE_PLAY_RUL, url));
                         }
                         mVideoView.start();
                         if(Hawk.get(HawkConfig.PLAY_SPEED, false)){
@@ -659,7 +664,7 @@ public class PlayActivity extends BaseActivity {
             }
         }
     }
-
+    String isVideo;
     private void initViewModel() {
         sourceViewModel = new ViewModelProvider(this).get(SourceViewModel.class);
         sourceViewModel.playResult.observe(this, new Observer<JSONObject>() {
@@ -669,6 +674,7 @@ public class PlayActivity extends BaseActivity {
                     try {
                         progressKey = info.optString("proKey", null);
                         boolean parse = info.optString("parse", "1").equals("1");
+
                         boolean jx = info.optString("jx", "0").equals("1");
                         playSubtitle = info.optString("subt", /*"https://dash.akamaized.net/akamai/test/caption_test/ElephantsDream/ElephantsDream_en.vtt"*/"");
                         subtitleCacheKey = info.optString("subtKey", null);
@@ -701,6 +707,9 @@ public class PlayActivity extends BaseActivity {
                         //    webUserAgent = UA.random();
                         //}
                         if (parse || jx) {
+                            if(parse){
+                                isVideo = info.optString("isVideo", "");
+                            }
                             boolean userJxList = (playUrl.isEmpty() && ApiConfig.get().getVipParseFlags().contains(flag)) || jx;
                             initParse(flag, userJxList, playUrl, url);
                         } else {
@@ -1611,6 +1620,17 @@ public class PlayActivity extends BaseActivity {
                 return new WebResourceResponse("image/png", null, null);
             }
             LOG.i("shouldInterceptRequest url:" + url);
+            boolean isVid = VideoParseRuler.IsVideoRules(isVideo, url);
+            if (isVid) {
+                LOG.e("isVideo", isVideo + "\r\nurl" + url);
+                mHandler.removeMessages(100);
+                loadFound = true;
+                String cookie = CookieManager.getInstance().getCookie(url);
+                if(!TextUtils.isEmpty(cookie))headers.put("Cookie", " " + cookie);//携带cookie
+                playUrl(url, headers);
+                stopLoadWebView(false);
+            }
+
             boolean isFilter = VideoParseRuler.isFilter(webUrl, url);
             if (isFilter) {
                 LOG.i( "shouldInterceptLoadRequest filter:" + url);
@@ -1623,8 +1643,8 @@ public class PlayActivity extends BaseActivity {
             } else {
                 ad = loadedUrls.get(url);
             }
-
             if (!ad && !loadFound) {
+
                 if (checkVideoFormat(url)) {
                     mHandler.removeMessages(100);
                     loadFound = true;
@@ -1783,6 +1803,29 @@ public class PlayActivity extends BaseActivity {
                 return createXWalkWebResourceResponse("image/png", null, null);
             }
             LOG.i("shouldInterceptLoadRequest url:" + url);
+            boolean isVid = VideoParseRuler.IsVideoRules(isVideo, url);
+            if (isVid) {
+                LOG.e("isVideo", isVideo + "\r\nurl" + url);
+                mHandler.removeMessages(100);
+                loadFound = true;
+                HashMap<String, String> webHeaders = new HashMap<>();
+                try {
+                    Map<String, String> hds = request.getRequestHeaders();
+                    for (String k : hds.keySet()) {
+                        if (k.equalsIgnoreCase("user-agent")
+                                || k.equalsIgnoreCase("referer")
+                                || k.equalsIgnoreCase("origin")) {
+                            webHeaders.put(k, " " + hds.get(k));
+                        }
+                    }
+                } catch (Throwable th) {
+
+                }
+                String cookie = CookieManager.getInstance().getCookie(url);
+                if(!TextUtils.isEmpty(cookie))webHeaders.put("Cookie", " " + cookie);//携带cookie
+                stopLoadWebView(false);
+            }
+
             boolean isFilter = VideoParseRuler.isFilter(webUrl, url);
             if (isFilter) {
                 LOG.i( "shouldInterceptLoadRequest filter:" + url);

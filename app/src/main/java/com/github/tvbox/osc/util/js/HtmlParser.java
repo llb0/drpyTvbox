@@ -2,11 +2,11 @@ package com.github.tvbox.osc.util.js;
 
 import android.text.TextUtils;
 
+import com.github.tvbox.osc.base.App;
 import com.github.tvbox.osc.util.StringUtils;
 
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
-import org.jsoup.nodes.Element;
 import org.jsoup.select.Elements;
 
 import java.net.MalformedURLException;
@@ -14,23 +14,15 @@ import java.net.URL;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
-import java.util.concurrent.Callable;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
 import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 
 public class HtmlParser {
-    private static String pdfh_html = "";
-    private static String pdfa_html = "";
-    private static final Pattern p = Pattern.compile("url\\((.*?)\\)", Pattern.MULTILINE | Pattern.DOTALL);
-    private static final Pattern NOADD_INDEX = Pattern.compile(":eq|:lt|:gt|:first|:last|^body$|^#");  // 不自动加eq下标索引
-    private static final Pattern URLJOIN_ATTR = Pattern.compile("(url|src|href|-original|-src|-play|-url|style)$", Pattern.MULTILINE | Pattern.CASE_INSENSITIVE);  // 需要自动urljoin的属性
-    private static final Pattern SPECIAL_URL = Pattern.compile("^(ftp|magnet|thunder|ws):", Pattern.MULTILINE | Pattern.CASE_INSENSITIVE);  // 过滤特殊链接,不走urlJoin
-    private static Document pdfh_doc = null;
-    private static Document pdfa_doc = null;
+    private String pdfh_html = "";
+    private String pdfa_html = "";
+    private Document pdfh_doc = null;
+    private Document pdfa_doc = null;
 
-    public static String joinUrl(String parent, String child) {
+    public String joinUrl(String parent, String child) {
         if (StringUtils.isEmpty(parent)) {
             return child;
         }
@@ -49,13 +41,13 @@ public class HtmlParser {
         return q;
     }
 
-    public static class Painfo {
+    private static class Painfo {
         public String nparse_rule;
         public int nparse_index;
         public List<String> excludes;
     }
 
-    private static Painfo getParseInfo(String nparse) {
+    private Painfo getParseInfo(String nparse) {
         /*
          根据传入的单规则获取 parse规则，索引位置,排除列表  -- 可以用于剔除元素,支持多个，按标签剔除，按id剔除等操作
          :param nparse:
@@ -96,34 +88,8 @@ public class HtmlParser {
         return painfo;
     }
 
-    public static boolean isIndex(String str) {
-        if (StringUtils.isEmpty(str)) {
-            return false;
-        }
-        for (String str2 : new String[]{":eq", ":lt", ":gt", ":first", ":last", "body", "#"}) {
-            if (str.contains(str2)) {
-                if (str2.equals("body") || str2.equals("#")) {
-                    return str.startsWith(str2);
-                }
-                return true;
-            }
-        }
-        return false;
-    }
 
-    public static boolean isUrl(String str) {
-        if (StringUtils.isEmpty(str)) {
-            return false;
-        }
-        for (String str2 : new String[]{"url", "src", "href", "-original", "-play"}) {
-            if (str.contains(str2)) {
-                return true;
-            }
-        }
-        return false;
-    }
-
-    private static String parseHikerToJq(String parse, boolean first) {
+    private String parseHikerToJq(String parse, boolean first) {
         /*
          海阔解析表达式转原生表达式,自动补eq,如果传了first就最后一个也取eq(0)
         :param parse:
@@ -137,7 +103,7 @@ public class HtmlParser {
             for (int i = 0; i < parses.length; i++) {
                 String[] pss = parses[i].split(" ");
                 String ps = pss[pss.length - 1];  //如果分割&&后带空格就取最后一个元素
-                Matcher m = NOADD_INDEX.matcher(ps);
+                Matcher m = App.NOADD_INDEX.matcher(ps);
                 //if (!isIndex(ps)) {
                 if (!m.find()) {
                     if (!first && i >= parses.length - 1) {  //不传first且遇到最后一个,不用补eq(0)
@@ -153,8 +119,7 @@ public class HtmlParser {
         } else {
             String[] pss = parse.split(" ");
             String ps = pss[pss.length - 1];  //如果分割&&后带空格就取最后一个元素
-            Matcher m = NOADD_INDEX.matcher(ps);
-            //if (!isIndex(ps) && first) {
+            Matcher m = App.NOADD_INDEX.matcher(ps);
             if (!m.find() && first) {
                 parse = parse + ":eq(0)";
             }
@@ -162,7 +127,7 @@ public class HtmlParser {
         return parse;
     }
 
-    public static String parseDomForUrl(String html, String rule, String add_url) {
+    public String parseDomForUrl(String html, String rule, String add_url) {
         if (!pdfh_html.equals(html)) {
             pdfh_html = html;
             pdfh_doc = Jsoup.parse(html);
@@ -199,7 +164,7 @@ public class HtmlParser {
             } else {
                 result = ret.attr(option);
                 if (option.toLowerCase().contains("style") && result.contains("url(")) {
-                    Matcher m = p.matcher(result);
+                    Matcher m = App.pp.matcher(result);
                     if (m.find()) {
                         result = m.group(1);
                     }
@@ -210,9 +175,8 @@ public class HtmlParser {
                 }
                 if (StringUtils.isNotEmpty(result) && StringUtils.isNotEmpty(add_url)) {
                     // 需要自动urljoin的属性
-                    Matcher m = URLJOIN_ATTR.matcher(option);
-                    Matcher n = SPECIAL_URL.matcher(result);
-                    //if (isUrl(option)) {
+                    Matcher m = App.URLJOIN_ATTR.matcher(option);
+                    Matcher n = App.SPECIAL_URL.matcher(result);
                     if (m.find() && !n.find()) {
                         if (result.contains("http")) {
                             result = result.substring(result.indexOf("http"));
@@ -229,7 +193,7 @@ public class HtmlParser {
 
     }
 
-    public static List<String> parseDomForArray(String html, String rule) {
+    public List<String> parseDomForArray(String html, String rule) {
         if (!pdfa_html.equals(html)) {
             pdfa_html = html;
             pdfa_doc = Jsoup.parse(html);
@@ -244,15 +208,14 @@ public class HtmlParser {
                 return new ArrayList<>();
             }
         }
-
         List<String> eleHtml = new ArrayList<>();
-        for (Element element1 : ret) {
-            eleHtml.add(element1.outerHtml());
+        for (int i = 0; i < ret.size(); i++) {
+            eleHtml.add(ret.get(i).outerHtml());
         }
         return eleHtml;
     }
 
-    private static Elements parseOneRule(Document doc, String nparse, Elements ret) {
+    private Elements parseOneRule(Document doc, String nparse, Elements ret) {
         Painfo painfo = getParseInfo(nparse);
         if (ret.isEmpty()) {
             ret = doc.select(painfo.nparse_rule);
@@ -277,7 +240,7 @@ public class HtmlParser {
         return ret;
     }
     
-    public static List<String> parseDomForList(String html, String p1, String list_text, String list_url, String add_url) {
+    public List<String> parseDomForList(String html, String p1, String list_text, String list_url, String add_url) {
         if (!pdfa_html.equals(html)) {
             pdfa_html = html;
             pdfa_doc = Jsoup.parse(html);
@@ -293,9 +256,10 @@ public class HtmlParser {
             }
         }
         List<String> new_vod_list = new ArrayList<>();
-        for(Element it : ret){
-            new_vod_list.add(parseDomForUrl(it.outerHtml(), list_text, "").trim() + '$' + parseDomForUrl(it.outerHtml(), list_url, add_url));
+        for (int i = 0; i < ret.size(); i++) {
+            new_vod_list.add(parseDomForUrl(ret.get(i).outerHtml(), list_text, "").trim() + '$' + parseDomForUrl(ret.get(i).outerHtml(), list_url, add_url));
         }
         return new_vod_list;
     }
+
 }

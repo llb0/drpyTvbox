@@ -59,6 +59,7 @@ import com.github.tvbox.osc.util.FileUtils;
 import com.github.tvbox.osc.util.HawkConfig;
 import com.github.tvbox.osc.util.HeavyTaskUtil;
 import com.github.tvbox.osc.util.LOG;
+import com.github.tvbox.osc.util.SearchHelper;
 import com.github.tvbox.osc.viewmodel.SourceViewModel;
 import com.orhanobut.hawk.Hawk;
 import com.owen.tvrecyclerview.widget.TvRecyclerView;
@@ -75,6 +76,7 @@ import java.lang.reflect.Field;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
+import java.util.HashMap;
 import java.util.List;
 
 import me.jessyan.autosize.utils.AutoSizeUtils;
@@ -309,7 +311,7 @@ public class HomeActivity extends BaseActivity {
     }
     private void initData() {
         SourceBean home = ApiConfig.get().getHomeSourceBean();
-
+        mCheckSources = SearchHelper.getSourcesForSearch();
         // takagen99 : Switch to show / hide source title
         if (HomeShow) {
             if (home != null && home.getName() != null && !home.getName().isEmpty())
@@ -663,11 +665,23 @@ public class HomeActivity extends BaseActivity {
         EventBus.getDefault().unregister(this);
         AppManager.getInstance().appExit(0);
         ControlManager.get().stopServer();
+        mCheckSources = null;
     }
-
+    HashMap<String, String> mCheckSources;
     // Site Switch on Home Button
     void showSiteSwitch() {
         List<SourceBean> sites = ApiConfig.get().getSourceBeanList();
+
+        ArrayList<SourceBean> mCheckSites = new ArrayList<>();
+        for (SourceBean bean : sites) {
+            if (!bean.isSearchable()) {
+                continue;
+            }
+            if (mCheckSources != null && !mCheckSources.containsKey(bean.getKey())) {
+                continue;
+            }
+            mCheckSites.add(bean);
+        }
         if (sites.size() > 0) {
             SelectDialog<SourceBean> dialog = new SelectDialog<>(HomeActivity.this);
             TvRecyclerView tvRecyclerView = dialog.findViewById(R.id.list);
@@ -705,7 +719,7 @@ public class HomeActivity extends BaseActivity {
                 public boolean areContentsTheSame(@NonNull @NotNull SourceBean oldItem, @NonNull @NotNull SourceBean newItem) {
                     return oldItem.getKey().equals(newItem.getKey());
                 }
-            }, sites, sites.indexOf(ApiConfig.get().getHomeSourceBean()));
+            }, mCheckSites, mCheckSites.indexOf(ApiConfig.get().getHomeSourceBean()));
             dialog.setOnDismissListener(new DialogInterface.OnDismissListener() {
                 @Override
                 public void onDismiss(DialogInterface dialog) {

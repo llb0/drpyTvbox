@@ -33,6 +33,7 @@ import com.google.gson.reflect.TypeToken;
 import com.lzy.okgo.OkGo;
 import com.lzy.okgo.callback.AbsCallback;
 import com.lzy.okgo.model.Response;
+import com.lzy.okgo.request.base.Request;
 import com.orhanobut.hawk.Hawk;
 import com.thoughtworks.xstream.XStream;
 import com.thoughtworks.xstream.io.xml.DomDriver;
@@ -41,6 +42,7 @@ import org.greenrobot.eventbus.EventBus;
 import org.json.JSONObject;
 
 import java.io.UnsupportedEncodingException;
+import java.net.URLDecoder;
 import java.net.URLEncoder;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
@@ -201,7 +203,16 @@ public class SourceViewModel extends ViewModel {
                         }
                     });
         } else if (type == 4) {
-            OkGo.<String>get(sourceBean.getApi())
+            String extend = sourceBean.getExt();
+            extend = getFixUrl(extend);
+
+            Request<String, ?> request;
+            if (URLEncoder.encode(extend).length()>1000) {
+                request = OkGo.post(sourceBean.getApi());
+            } else {
+                request = OkGo.get(sourceBean.getApi());
+            }
+            request.params("extend", extend)
                     .tag(sourceBean.getKey() + "_sort")
                     .params("filter", "true")
                     .execute(new AbsCallback<String>() {
@@ -319,7 +330,16 @@ public class SourceViewModel extends ViewModel {
                     e.printStackTrace();
                 }
             }
-            OkGo.<String>get(homeSourceBean.getApi())
+            String extend = homeSourceBean.getExt();
+            extend = getFixUrl(extend);
+
+            Request<String, ?> request;
+            if (URLEncoder.encode(extend).length()>1000) {
+                request = OkGo.post(homeSourceBean.getApi());
+            } else {
+                request = OkGo.get(homeSourceBean.getApi());
+            }
+            request.params("extend", extend)
                     .tag(homeSourceBean.getApi())
                     .params("ac", "detail")
                     .params("filter", "true")
@@ -446,16 +466,32 @@ public class SourceViewModel extends ViewModel {
 
     // detailContent
     public void getDetail(String sourceKey, String id) {
+        if (id.startsWith("push://") && ApiConfig.get().getSource("push_agent") != null) {
+            String pushUrl = id.substring(7);
+            if (pushUrl.startsWith("b64:")) {
+                try {
+                    pushUrl = new String(Base64.decode(pushUrl.substring(4), Base64.DEFAULT | Base64.URL_SAFE | Base64.NO_WRAP), "UTF-8");
+                } catch (UnsupportedEncodingException e) {
+                    e.printStackTrace();
+                }
+            } else {
+                pushUrl = URLDecoder.decode(pushUrl);
+            }
+            sourceKey = "push_agent";
+            id = pushUrl;
+        }
+
         SourceBean sourceBean = ApiConfig.get().getSource(sourceKey);
         int type = sourceBean.getType();
         if (type == 3) {
+            String finalId = id;
             spThreadPool.execute(new Runnable() {
                 @Override
                 public void run() {
                     try {
                         Spider sp = ApiConfig.get().getCSP(sourceBean);
                         List<String> ids = new ArrayList<>();
-                        ids.add(id);
+                        ids.add(finalId);
                         json(detailResult, sp.detailContent(ids), sourceBean.getKey());
                     } catch (Throwable th) {
                         th.printStackTrace();
@@ -464,7 +500,16 @@ public class SourceViewModel extends ViewModel {
                 }
             });
         } else if (type == 0 || type == 1 || type == 4) {
-            OkGo.<String>get(sourceBean.getApi())
+            String extend = sourceBean.getExt();
+            extend = getFixUrl(extend);
+
+            Request<String, ?> request;
+            if (URLEncoder.encode(extend).length()>1000) {
+                request = OkGo.post(sourceBean.getApi());
+            } else {
+                request = OkGo.get(sourceBean.getApi());
+            }
+            request.params("extend", extend)
                     .tag("detail")
                     .params("ac", type == 0 ? "videolist" : "detail")
                     .params("ids", id)
@@ -537,15 +582,13 @@ public class SourceViewModel extends ViewModel {
 
                         @Override
                         public void onSuccess(Response<String> response) {
-                            execute(() -> {
-                                if (type == 0) {
-                                    String xml = response.body();
-                                    xml(searchResult, xml, sourceBean.getKey());
-                                } else {
-                                    String json = response.body();
-                                    json(searchResult, json, sourceBean.getKey());
-                                }
-                            });
+                            if (type == 0) {
+                                String xml = response.body();
+                                xml(searchResult, xml, sourceBean.getKey());
+                            } else {
+                                String json = response.body();
+                                json(searchResult, json, sourceBean.getKey());
+                            }
                         }
 
                         @Override
@@ -556,7 +599,16 @@ public class SourceViewModel extends ViewModel {
                         }
                     });
         } else if (type == 4) {
-            OkGo.<String>get(sourceBean.getApi())
+            String extend = sourceBean.getExt();
+            extend = getFixUrl(extend);
+
+            Request<String, ?> request;
+            if (URLEncoder.encode(extend).length()>1000) {
+                request = OkGo.post(sourceBean.getApi());
+            } else {
+                request = OkGo.get(sourceBean.getApi());
+            }
+            request.params("extend", extend)
                     .params("wd", wd)
                     .params("ac", "detail")
                     .params("quick", "false")
@@ -574,10 +626,8 @@ public class SourceViewModel extends ViewModel {
                         @Override
                         public void onSuccess(Response<String> response) {
                             String json = response.body();
-                            execute(() -> {
-                                LOG.i(json);
-                                json(searchResult, json, sourceBean.getKey());
-                            });
+                            LOG.i(json);
+                            json(searchResult, json, sourceBean.getKey());
                         }
 
                         @Override
@@ -621,15 +671,13 @@ public class SourceViewModel extends ViewModel {
 
                         @Override
                         public void onSuccess(Response<String> response) {
-                            execute(() -> {
-                                if (type == 0) {
-                                    String xml = response.body();
-                                    xml(quickSearchResult, xml, sourceBean.getKey());
-                                } else {
-                                    String json = response.body();
-                                    json(quickSearchResult, json, sourceBean.getKey());
-                                }
-                            });
+                            if (type == 0) {
+                                String xml = response.body();
+                                xml(quickSearchResult, xml, sourceBean.getKey());
+                            } else {
+                                String json = response.body();
+                                json(quickSearchResult, json, sourceBean.getKey());
+                            }
                         }
 
                         @Override
@@ -640,7 +688,16 @@ public class SourceViewModel extends ViewModel {
                         }
                     });
         } else if (type == 4) {
-            OkGo.<String>get(sourceBean.getApi())
+            String extend = sourceBean.getExt();
+            extend = getFixUrl(extend);
+
+            Request<String, ?> request;
+            if (URLEncoder.encode(extend).length()>1000) {
+                request = OkGo.post(sourceBean.getApi());
+            } else {
+                request = OkGo.get(sourceBean.getApi());
+            }
+            request.params("extend", extend)
                     .params("wd", wd)
                     .params("ac", "detail")
                     .params("quick", "true")
@@ -658,10 +715,8 @@ public class SourceViewModel extends ViewModel {
                         @Override
                         public void onSuccess(Response<String> response) {
                             String json = response.body();
-                            execute(() -> {
-                                LOG.i(json);
-                                json(quickSearchResult, json, sourceBean.getKey());
-                            });
+                            LOG.i(json);
+                            json(quickSearchResult, json, sourceBean.getKey());
                         }
 
                         @Override
@@ -771,13 +826,18 @@ public class SourceViewModel extends ViewModel {
                 LOG.e(th);
             }
         } else if (type == 4) {
-            String extend=sourceBean.getExt();
-            extend=getFixUrl(extend);
-            if(URLEncoder.encode(extend).length()>1000)extend="";
-            OkGo.<String>get(sourceBean.getApi())
+            String extend = sourceBean.getExt();
+            extend = getFixUrl(extend);
+
+            Request<String, ?> request;
+            if (URLEncoder.encode(extend).length()>1000) {
+                request = OkGo.post(sourceBean.getApi());
+            } else {
+                request = OkGo.get(sourceBean.getApi());
+            }
+            request.params("extend", extend)
                     .params("play", url)
                     .params("flag", playFlag)
-                    .params("extend", extend)
                     .tag("play")
                     .execute(new AbsCallback<String>() {
                         @Override

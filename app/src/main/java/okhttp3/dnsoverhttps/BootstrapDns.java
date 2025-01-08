@@ -15,6 +15,8 @@
  */
 package okhttp3.dnsoverhttps;
 
+import androidx.annotation.NonNull;
+
 import java.net.InetAddress;
 import java.net.UnknownHostException;
 import java.util.List;
@@ -34,7 +36,7 @@ final class BootstrapDns implements Dns {
     this.dnsServers = dnsServers;
   }
 
-  @Override public List<InetAddress> lookup(String hostname) throws UnknownHostException {
+  @Override public List<InetAddress> lookup(@NonNull String hostname) throws UnknownHostException {
     if (!this.dnsHostname.equals(hostname)) {
       throw new UnknownHostException(
           "BootstrapDns called for " + hostname + " instead of " + dnsHostname);

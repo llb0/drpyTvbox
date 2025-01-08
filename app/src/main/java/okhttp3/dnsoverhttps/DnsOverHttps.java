@@ -15,6 +15,7 @@
  */
 package okhttp3.dnsoverhttps;
 
+import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 
 import java.io.ByteArrayOutputStream;
@@ -124,7 +125,7 @@ public class DnsOverHttps implements Dns {
     }
 
     @Override
-    public List<InetAddress> lookup(String hostname) throws UnknownHostException {
+    public List<InetAddress> lookup(@NonNull String hostname) throws UnknownHostException {
         if (this.url == null)
             return Dns.SYSTEM.lookup(hostname);
         if (!resolvePrivateAddresses || !resolvePublicAddresses) {
@@ -143,16 +144,8 @@ public class DnsOverHttps implements Dns {
 
     public byte[] lookupHttpsForwardSync(String hostname) throws Throwable {
         ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream();
-        try {
-            byteArrayOutputStream.write(executeRequestsSync(hostname, DnsRecordCodec.TYPE_A));
-        } finally {
-
-        }
-        try {
-            byteArrayOutputStream.write(executeRequestsSync(hostname, DnsRecordCodec.TYPE_AAAA));
-        } finally {
-
-        }
+        byteArrayOutputStream.write(executeRequestsSync(hostname, DnsRecordCodec.TYPE_A));
+        byteArrayOutputStream.write(executeRequestsSync(hostname, DnsRecordCodec.TYPE_AAAA));
         return byteArrayOutputStream.toByteArray();
     }
 
@@ -213,7 +206,7 @@ public class DnsOverHttps implements Dns {
                 }
 
                 @Override
-                public void onResponse(Call call, Response response) {
+                public void onResponse(@NonNull Call call, @NonNull Response response) {
                     processResponse(response, hostname, responses, failures);
                     latch.countDown();
                 }

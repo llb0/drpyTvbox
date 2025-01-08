@@ -1,11 +1,13 @@
 package com.github.tvbox.osc.util.js;
 
+import com.google.gson.Gson;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 
 import org.json.JSONObject;
 
+import java.net.URLDecoder;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -60,6 +62,14 @@ public class Json {
     }
 
     public static Map<String, String> toMap(JsonElement element) {
+        Map<String, String> map = new HashMap<>();
+        JsonObject object = safeObject(element);
+        for (String key : object.keySet()) map.put(key, safeString(object, key));
+        return map;
+    }
+
+    public static Map<String, String> toMap(String json) {
+        JsonElement element = new Gson().toJsonTree(json);
         Map<String, String> map = new HashMap<>();
         JsonObject object = safeObject(element);
         for (String key : object.keySet()) map.put(key, safeString(object, key));

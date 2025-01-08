@@ -147,7 +147,7 @@ public class SubtitleViewModel extends ViewModel {
                                 if (matcher.find()) {
                                     String url = String.format("https://secure.assrt.net/download/%s/-/%s/%s", matcher.group(1), matcher.group(2), matcher.group(3));
                                     SubtitleBean one = new SubtitleBean();
-                                    Element name = item.selectFirst("#filelist-name");
+                                    Element name = item.select("#filelist-name").first();
                                     one.setName(name == null ? matcher.group(3) : name.text());
                                     one.setUrl(url);
                                     one.setIsZip(false);
@@ -156,7 +156,7 @@ public class SubtitleViewModel extends ViewModel {
                             }
                             setSearchListData(data, true, false);
                         } else {//有的字幕 不一定是压缩包
-                            Element item = doc.selectFirst(".download a#btn_download");
+                            Element item = doc.select(".download a#btn_download").first();
                             String href = item.attr("href");
                             if (TextUtils.isEmpty(href)) setSearchListData(null, true, false);
                             String h2 = href.toLowerCase();

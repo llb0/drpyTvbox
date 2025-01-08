@@ -1,8 +1,15 @@
 package com.github.tvbox.osc.util;
 
 import android.net.Uri;
+import android.text.TextUtils;
+
+import com.whl.quickjs.wrapper.QuickJSContext;
+
+import org.json.JSONException;
+
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 public class VideoParseRuler {
@@ -110,6 +117,56 @@ public class VideoParseRuler {
             e.printStackTrace();
         }
         return false;
+    }
+
+    public static boolean IsVideoRules(String isVideo, String url) {
+        if(!TextUtils.isEmpty(isVideo)){
+            if(isVideo.startsWith("js:")){
+                isVideo = isVideo.substring(3);
+                try {
+                    QuickJSContext jSContext = QuickJSContext.create();
+                    jSContext.getGlobalObject().set("input", url);
+                    //return (boolean) jSContext.evaluate("var input = '" + url + "';\n" + isVideo);
+                    return (boolean) jSContext.evaluate(isVideo);
+                } catch (Exception e) {
+                    LOG.e(e);
+                    return false;
+                }
+            }
+            if(isVideo.startsWith("reg:")){
+                isVideo = isVideo.substring(4);
+                Pattern onePattern = Pattern.compile(isVideo);
+                return onePattern.matcher(url).find();
+            }
+        }
+        return false;
+    }
+
+    public static String clearAdRemove(String adRemove, String str) {
+        if(!TextUtils.isEmpty(adRemove)){
+            if(adRemove.startsWith("js:")){
+                adRemove = adRemove.substring(3);
+                try {
+                    QuickJSContext jSContext = QuickJSContext.create();
+                    jSContext.getGlobalObject().set("input", str);
+                    return (String) jSContext.evaluate(adRemove);
+                } catch (Exception e) {
+                    LOG.e(e);
+                    return str;
+                }
+            }
+            if(adRemove.startsWith("reg:")){
+                adRemove = adRemove.substring(4);
+                return str.replaceAll(adRemove, "");
+            }
+        }
+        return str;
+    }
+
+    private static Object runJs(String js, String str) {
+        QuickJSContext jSContext = QuickJSContext.create();
+        jSContext.getGlobalObject().set("input", str);
+        return jSContext.evaluate(js);
     }
 
     private static boolean checkIsFilterForOneHostRules(String host, String url) {

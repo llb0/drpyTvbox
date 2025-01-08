@@ -19,6 +19,7 @@ import org.json.JSONObject;
 import java.io.IOException;
 import java.net.URLEncoder;
 
+import java.util.Optional;
 import java.util.Timer;
 import java.util.TimerTask;
 import java.util.concurrent.ExecutorService;
@@ -31,10 +32,12 @@ public class Global {
     private QuickJSContext runtime;
     public ExecutorService executor;
     private final Timer timer;
+    private final HtmlParser htmlParser;
 
     public Global(ExecutorService executor) {
         this.executor = executor;
         this.timer = new Timer();
+        this.htmlParser = new HtmlParser();
     }
 
     @Keep
@@ -52,32 +55,29 @@ public class Global {
     @Keep
     @Function
     public String joinUrl(String parent, String child) {
-        return HtmlParser.joinUrl(parent, child);
+        return htmlParser.joinUrl(parent, child);
     }
 
-    @Keep
-    @Function
     public String pd(String html, String rule, String add_url) {
-        return HtmlParser.parseDomForUrl(html, rule, add_url);
+        return htmlParser.parseDomForUrl(html, rule, add_url);
     }
 
     @Keep
     @Function
     public String pdfh(String html, String rule) {
-        return HtmlParser.parseDomForUrl(html, rule, "");
+        return htmlParser.parseDomForUrl(html, rule, "");
     }
 
     @Keep
     @Function
     public JSArray pdfa(String html, String rule) {
-
-        return new JSUtils<String>().toArray(runtime, HtmlParser.parseDomForArray(html, rule));
+        return new JSUtils<String>().toArray(runtime, htmlParser.parseDomForArray(html, rule));
     }
 
     @Keep
     @Function
     public JSArray pdfla(String html, String p1, String list_text, String list_url, String add_url) {
-        return new JSUtils<String>().toArray(runtime, HtmlParser.parseDomForList(html, p1, list_text, list_url, add_url));
+        return new JSUtils<String>().toArray(runtime, htmlParser.parseDomForList(html, p1, list_text, list_url, add_url));
     }
 
     @Keep
